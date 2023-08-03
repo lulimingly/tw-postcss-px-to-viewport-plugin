@@ -7,6 +7,7 @@ import {
   declarationExists,
   getUnit,
   isExclude,
+  isInclude,
   validateParams,
 } from './utils';
 import objectAssign from 'object-assign';
@@ -16,7 +17,7 @@ import postcss from 'postcss';
 
 const defaults: Required<Omit<OptionType, 'exclude' | 'include'>> = {
   unitToConvert: 'px',
-  viewportWidth: 320,
+  viewportWidth: 375,
   viewportHeight: 568, // not now used; TODO: need for different units and math for different properties
   unitPrecision: 5,
   viewportUnit: 'vw',
@@ -48,6 +49,20 @@ const postcssPxToViewport = (options: OptionType) => {
       css.walkRules((rule: RuleType) => {
         // Add exclude option to ignore some files like 'node_modules'
         const file = rule.source?.input.file || '';
+        if (opts.include && file) {
+          if (Object.prototype.toString.call(opts.include) === '[object RegExp]') {
+            if (!isInclude(opts.include as RegExp, file)) return;
+          } else if (
+            // Object.prototype.toString.call(opts.exclude) === '[object Array]' &&
+            opts.exclude instanceof Array
+          ) {
+            for (let i = 0; i < opts.include.length; i++) {
+              if (!isInclude(opts.include[i], file)) return;
+            }
+          } else {
+            throw new Error('options.include should be RegExp or Array.');
+          }
+        }
         if (opts.exclude && file) {
           if (Object.prototype.toString.call(opts.exclude) === '[object RegExp]') {
             if (isExclude(opts.exclude as RegExp, file)) return;
